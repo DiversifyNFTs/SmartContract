@@ -2,17 +2,15 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract DiversifyNFT is ERC721 {
-    address public team;
-    address public pendingTeam;
+contract DiversifyNFT is ERC721, Ownable {
+    address public minter;
 
     mapping(uint256 => string) internal _tokenURIs;
 
     uint256 public totalSupply;
 
-    event ChangeTeam(address _team);
-    event AcceptTeam(address _team);
     event ChangeTokenURI(uint256 _tokenId, string _tokenURI);
 
     /// @param user Address of the user
@@ -22,22 +20,24 @@ contract DiversifyNFT is ERC721 {
         string tokenURI; // uri of the token
     }
 
-    modifier onlyTeam() {
-        require(msg.sender == team, "not allowed");
+    modifier onlyMinter() {
+        require(msg.sender == minter, "DiversifyNFT:not allowed");
         _;
     }
 
     /// @param _team Admin address
     constructor(address _team) ERC721("DiversifyNFT", "DSF") {
-        team = _team;
+        _transferOwnership(_team);
     }
 
-    function mint(MintParams[] memory _recipient) external onlyTeam {
-        for (uint256 i = 0; i < _recipient.length; i++) {
-            totalSupply += 1;
-            _mint(_recipient[i].user, totalSupply);
-            _tokenURIs[totalSupply] = _recipient[i].tokenURI;
-        }
+    /// @notice Mint the new NFT
+    /// @dev only minter can mint new NFT
+    /// @param _user Address where the NFT should be minted
+    /// @param _tokenURI TokenURI which needs to be attached with NFT
+    function mint(address _user, string memory _tokenURI) external onlyMinter {
+        totalSupply += 1;
+        _tokenURIs[totalSupply] = _tokenURI;
+        _mint(_user, totalSupply);
     }
 
     /// @dev Changes token URI of specific tokenID
@@ -45,7 +45,7 @@ contract DiversifyNFT is ERC721 {
     /// @param _tokenURI New token URI
     function changeTokenURI(uint256 _tokenId, string memory _tokenURI)
         external
-        onlyTeam
+        onlyOwner
     {
         _tokenURIs[_tokenId] = _tokenURI;
     }
@@ -61,19 +61,10 @@ contract DiversifyNFT is ERC721 {
         return _tokenURIs[_tokenId];
     }
 
-    /// @notice Change admin address
-    /// @param _team Address of the new admmin
-    function changeTeam(address _team) external onlyTeam {
-        pendingTeam = _team;
-        emit ChangeTeam(_team);
-    }
-
-    /// @notice New admin needs to accept that he is new admin
-    /// @dev should be called by the address set in changeTeam function.
-    function acceptTeam() external {
-        require(msg.sender == pendingTeam, "invalid");
-        team = pendingTeam;
-        pendingTeam = address(0);
-        emit AcceptTeam(team);
+    /// @notice Adds the minter
+    /// @dev Minter can be added only once
+    /// @param _minter Address of the minter
+    function changeMinter(address _minter) external onlyOwner {
+        minter = _minter;
     }
 }

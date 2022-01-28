@@ -1,19 +1,48 @@
 const { ethers } = require("hardhat");
 
-// ENTER TEAM ADDRESS BELOW;
+/// ENTER FOllOWING DETAILS
+const NETWORK = "rinkeby";
 const TEAM_ADDRESS = "0xee06986E54157FDF85cBa935d41fd47c27ab6F82";
-/// ENTER TEAM ADDRESS ABOVE
+const FEE = "10000000000000000"; // fee in ETH (1e18 format)
+const WITHDRAWER = "0xee06986E54157FDF85cBa935d41fd47c27ab6F82";
+/// ETHER ABOVE DETAILS
 
 async function main() {
   const DiversifyNFTMain = await ethers.getContractFactory("DiversifyNFT");
   const DiversifyNFTItem = await ethers.getContractFactory("DiversifyNFTItem");
+  const DiversifyNFTSales = await ethers.getContractFactory(
+    "DiversifyNFTSales"
+  );
 
   if (TEAM_ADDRESS.length != 0) {
     const diversifyNFTMain = await DiversifyNFTMain.deploy(TEAM_ADDRESS);
     const diversifyNFTItem = await DiversifyNFTItem.deploy(TEAM_ADDRESS);
+    const diversifyNFTSales = await DiversifyNFTSales.deploy(
+      TEAM_ADDRESS,
+      FEE,
+      WITHDRAWER,
+      diversifyNFTMain.address
+    );
 
     console.log(`🎉 DiversifyNFTMain Deployed to ${diversifyNFTMain.address}`);
     console.log(`🎉 DiversifyNFTItem Deployed to ${diversifyNFTItem.address}`);
+    console.log(
+      `🎉 DiversifyNFTSales Deployed to ${diversifyNFTSales.address}`
+    );
+    await diversifyNFTMain.changeMinter(diversifyNFTSales.address);
+    console.log("🎉 Sales contract added to main contract");
+
+    console.log("============================================================");
+    console.log("📊 Etherscan verification scripts");
+    console.log(
+      `DiversifyNFTMain: npx hardhat verify --network ${NETWORK} ${diversifyNFTMain.address} "${TEAM_ADDRESS}"`
+    );
+    console.log(
+      `DiversifyNFTItem: npx hardhat verify --network ${NETWORK} ${diversifyNFTItem.address} "${TEAM_ADDRESS}"`
+    );
+    console.log(
+      `DiversifyNFTSales: npx hardhat verify --network ${NETWORK} ${diversifyNFTSales.address} "${TEAM_ADDRESS}" "${FEE}" "${WITHDRAWER}" "${diversifyNFTMain.address}"`
+    );
   } else {
     console.log("🔴 Please add team address in the script");
   }
