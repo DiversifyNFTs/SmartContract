@@ -2,9 +2,8 @@ const { ethers } = require("hardhat");
 
 /// ENTER FOllOWING DETAILS
 const NETWORK = "rinkeby";
-const TEAM_ADDRESS = "0xee06986E54157FDF85cBa935d41fd47c27ab6F82";
+const TEAM_ADDRESS = "0x6f99e915Ee5B592a1Fd2203e15B0ECc157B535c8";
 const FEE = "10000000000000000"; // fee in ETH (1e18 format)
-const WITHDRAWER = "0xee06986E54157FDF85cBa935d41fd47c27ab6F82";
 /// ETHER ABOVE DETAILS
 
 async function main() {
@@ -20,7 +19,6 @@ async function main() {
     const diversifyNFTSales = await DiversifyNFTSales.deploy(
       TEAM_ADDRESS,
       FEE,
-      WITHDRAWER,
       diversifyNFTMain.address
     );
 
@@ -29,8 +27,13 @@ async function main() {
     console.log(
       `🎉 DiversifyNFTSales Deployed to ${diversifyNFTSales.address}`
     );
-    await diversifyNFTMain.changeMinter(diversifyNFTSales.address);
-    console.log("🎉 Sales contract added to main contract");
+
+    try {
+      await diversifyNFTMain.changeMinter(diversifyNFTSales.address);
+      console.log("🎉 Sales contract added to main contract");
+    } catch (error) {
+      console.log("Error while adding minter, please add it manually");
+    }
 
     console.log("============================================================");
     console.log("📊 Etherscan verification scripts");
@@ -41,7 +44,7 @@ async function main() {
       `DiversifyNFTItem: npx hardhat verify --network ${NETWORK} ${diversifyNFTItem.address} "${TEAM_ADDRESS}"`
     );
     console.log(
-      `DiversifyNFTSales: npx hardhat verify --network ${NETWORK} ${diversifyNFTSales.address} "${TEAM_ADDRESS}" "${FEE}" "${WITHDRAWER}" "${diversifyNFTMain.address}"`
+      `DiversifyNFTSales: npx hardhat verify --network ${NETWORK} ${diversifyNFTSales.address} "${TEAM_ADDRESS}" "${FEE}" "${diversifyNFTMain.address}"`
     );
   } else {
     console.log("🔴 Please add team address in the script");

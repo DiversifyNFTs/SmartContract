@@ -1,14 +1,13 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 interface IDiversifyNFT {
     function mint(address, string memory) external;
 }
 
-contract DiversifyNFTSales is AccessControlEnumerable, Ownable {
+contract DiversifyNFTSales is AccessControl {
     address public diversifyNFT;
 
     uint256 public fee;
@@ -21,6 +20,7 @@ contract DiversifyNFTSales is AccessControlEnumerable, Ownable {
 
     // roles
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER");
+    bytes32 public constant ADMIN = keccak256("ADMIN");
 
     struct MintParams {
         address user;
@@ -28,6 +28,11 @@ contract DiversifyNFTSales is AccessControlEnumerable, Ownable {
     }
 
     event ChangeFee(uint256 fee);
+
+    modifier onlyOwner() {
+        require(hasRole(ADMIN, msg.sender), "not allowed");
+        _;
+    }
 
     constructor(
         address _owner,
@@ -37,7 +42,7 @@ contract DiversifyNFTSales is AccessControlEnumerable, Ownable {
         fee = _fee;
         diversifyNFT = _diversifyNFT;
         mintLimit = 3000;
-        _transferOwnership(_owner);
+        _grantRole(ADMIN, _owner);
     }
 
     /// @notice Takes the {fee} and mints NFT based on tokenID provided
@@ -72,7 +77,7 @@ contract DiversifyNFTSales is AccessControlEnumerable, Ownable {
     /// @param _to where the funds should be sent
     function withdraw(address payable _to) external {
         require(
-            owner() == msg.sender || hasRole(WITHDRAWER_ROLE, msg.sender),
+            hasRole(ADMIN, msg.sender) || hasRole(WITHDRAWER_ROLE, msg.sender),
             "not allowed"
         );
         _to.transfer(address(this).balance);
@@ -91,15 +96,21 @@ contract DiversifyNFTSales is AccessControlEnumerable, Ownable {
     }
 
     /// @notice Grants the withdrawer role
+    /// @param _role Role which needs to be assigned
     /// @param _user Address of the new withdrawer
-    function grantWithdrawer(address _user) external onlyOwner {
-        _grantRole(WITHDRAWER_ROLE, _user);
+    function grantRole(bytes32 _role, address _user) public override onlyOwner {
+        _grantRole(_role, _user);
     }
 
     /// @notice Revokes the withdrawer role
+    /// @param _role Role which needs to be revoked
     /// @param _user Address which we want to revoke
-    function revokeWithdrawer(address _user) external onlyOwner {
-        _revokeRole(WITHDRAWER_ROLE, _user);
+    function revokeRole(bytes32 _role, address _user)
+        public
+        override
+        onlyOwner
+    {
+        _revokeRole(_role, _user);
     }
 
     /// @notice Change max limit

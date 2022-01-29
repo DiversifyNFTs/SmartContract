@@ -80,17 +80,15 @@ describe("DiversifyNFTSales", function () {
   });
 
   it("should change the withdrawer", async function () {
-    await sales.grantWithdrawer(signers[3].address);
     const role = await sales.WITHDRAWER_ROLE();
+
+    await sales.grantRole(role, signers[3].address);
     expect(await sales.hasRole(role, signers[3].address)).to.equals(true);
   });
 
-  it("should set the team address", async function () {
-    expect(await sales.owner()).to.equals(signers[0].address);
-  });
-
-  it("should change the team address", async function () {
-    await sales.transferOwnership(signers[1].address);
-    expect(await sales.owner()).to.equals(signers[1].address);
+  it("should set the owner address", async function () {
+    const role = await sales.WITHDRAWER_ROLE();
+    await sales.grantRole(role, signers[3].address);
+    expect(await sales.hasRole(role, signers[3].address)).to.equals(true);
   });
 });

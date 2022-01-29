@@ -25,9 +25,9 @@ contract DiversifyNFT is ERC721, Ownable {
         _;
     }
 
-    /// @param _team Admin address
-    constructor(address _team) ERC721("DiversifyNFT", "DSF") {
-        _transferOwnership(_team);
+    /// @param _owner Admin address
+    constructor(address _owner) ERC721("DiversifyNFT", "DSF") {
+        _transferOwnership(_owner);
     }
 
     /// @notice Mint the new NFT
