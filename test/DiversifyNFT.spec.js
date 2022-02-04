@@ -33,7 +33,7 @@ describe("DiversifyNFT", function () {
       "https://someothernft.com",
     ]);
 
-    await sales.mint([[signers[0].address, 1]], {
+    await sales.mint(signers[0].address, 1, {
       value: ethers.utils.parseEther("1.0"),
     });
   });

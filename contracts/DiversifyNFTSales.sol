@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 interface IDiversifyNFT {
     function mint(address, string memory) external;
@@ -21,11 +22,7 @@ contract DiversifyNFTSales is AccessControl {
     // roles
     bytes32 public constant WITHDRAWER_ROLE = keccak256("WITHDRAWER");
     bytes32 public constant ADMIN = keccak256("ADMIN");
-
-    struct MintParams {
-        address user;
-        uint256 tokenId;
-    }
+    bytes32 public merkleRootWL = 0xccb8e3ece3a6498be5ce3840d581ef6701a214fea16a40111552998e21fed6a3;
 
     event ChangeFee(uint256 fee);
 
@@ -45,20 +42,37 @@ contract DiversifyNFTSales is AccessControl {
         _grantRole(ADMIN, _owner);
     }
 
-    /// @notice Takes the {fee} and mints NFT based on tokenID provided
-    function mint(MintParams[] memory _data) external payable {
-        for (uint256 i = 0; i < _data.length; i++) {
+    /// @notice Mints the NFT
+    /// @param _user Address of the user
+    /// @param _quantity Quantity of NFTs to be minted
+    function mint(address _user, uint256 _quantity) external payable {
+        // check if the contract received fee
+        require(msg.value >= fee * _quantity, "underpriced");
+
+        for (uint256 i = 0; i < _quantity; i++) {
             require(minted + 1 <= mintLimit, "cannot mint more");
-            // check if the NFT with the tokenID is already minted
-            require(!usedTokenURIs[_data[i].tokenId], "already minted");
-            // check if the contract received fee
-            require(msg.value >= fee, "underpriced");
             // mint the NFT
-            IDiversifyNFT(diversifyNFT).mint(
-                _data[i].user,
-                tokenURIs[_data[i].tokenId]
-            );
-            usedTokenURIs[_data[i].tokenId] = true;
+            IDiversifyNFT(diversifyNFT).mint(_user, tokenURIs[minted]);
+            usedTokenURIs[minted] = true;
+            minted = minted + 1;
+        }
+    }
+
+    /// @notice Mints the NFT to whitelisted user
+    /// @param _merkleProof proof of receipt
+    /// @param _user Address of the user
+    /// @param _quantity Quantity of NFTs to be minted
+    function whiteListMint(bytes32[] calldata _merkleProof, address _user, uint256 _quantity) external payable{
+        bytes32 leaf = keccak256(abi.encodePacked(_user));
+        require(MerkleProof.verify(_merkleProof, merkleRootWL, leaf), "PS: Failed to verify WhiteList");
+        // check if the contract received fee
+        require(msg.value >= fee * _quantity, "underpriced");
+
+        for (uint256 i = 0; i < _quantity; i++) {
+            require(minted + 1 <= mintLimit, "cannot mint more");
+            // mint the NFT
+            IDiversifyNFT(diversifyNFT).mint(_user, tokenURIs[minted]);
+            usedTokenURIs[minted] = true;
             minted = minted + 1;
         }
     }
@@ -117,5 +131,11 @@ contract DiversifyNFTSales is AccessControl {
     /// @param _mintLimit new max limit
     function changeMintLimit(uint256 _mintLimit) external onlyOwner {
         mintLimit = _mintLimit;
+    }
+
+    /// @notice Set New Whitelist
+    /// @param _merkleRootWL New Whitelist
+    function setMerkleRootWL(bytes32 _merkleRootWL) external onlyOwner {
+        merkleRootWL = _merkleRootWL;
     }
 }

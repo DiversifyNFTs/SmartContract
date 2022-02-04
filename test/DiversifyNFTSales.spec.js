@@ -1,10 +1,16 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const {MerkleTree} = require('merkletreejs');
+const SHA3 = require('keccak256');
+const {hexlify, arrayify} = require('@ethersproject/bytes');
 
 let signers;
 let diversifyNFT;
 let sales;
 let fee;
+
+let wallet1 = '0x6f99e915Ee5B592a1Fd2203e15B0ECc157B535c8';
+let wallet2 = '0xfDC749A1feF80849C376461810bc76fBE87148eA';
 
 describe("DiversifyNFTSales", function () {
   beforeEach(async function () {
@@ -14,6 +20,12 @@ describe("DiversifyNFTSales", function () {
     const DiversifyNFTSales = await ethers.getContractFactory(
       "DiversifyNFTSales"
     );
+    // console.log('address----', signers[1].address, wallet1);
+
+    // Put addr1, addr2, addr3 to whitelist
+    const wlLeaves = [wallet1, wallet2].map(x => SHA3(x));
+    this.wlTree = new MerkleTree(wlLeaves, SHA3, {sortPairs: true});
+    console.log(this.wlTree.getRoot().toString('hex'));
 
     diversifyNFT = await DiversifyNFT.deploy(signers[0].address);
 
@@ -36,7 +48,7 @@ describe("DiversifyNFTSales", function () {
 
   describe("#Mint and #Withdraw", function () {
     beforeEach(async function () {
-      await sales.mint([[signers[0].address, 1]], {
+      await sales.mint(signers[0].address, 1, {
         value: ethers.utils.parseEther("1.0"),
       });
     });
@@ -49,17 +61,18 @@ describe("DiversifyNFTSales", function () {
       expect(await sales.minted()).to.equals(1);
     });
 
-    it("should should revert if same token is minted", async function () {
-      expect(
-        sales.mint([[signers[0].address, 1]], {
-          value: ethers.utils.parseEther("1.0"),
-        })
-      ).to.be.revertedWith("already minted");
+    it('should mint to whitelisted user', async function () {
+      // Try to mint before initialization (This also includes verification of value sent)
+      const proof = this.wlTree.getProof(SHA3(wallet1)).map(p => hexlify(p.data));
+      await sales.whiteListMint(proof, wallet1, 2, {
+        value: ethers.utils.parseEther("1.0"),
+      })
+      expect(await sales.minted()).to.equals(3);
     });
 
     it("should  revert if attached value is less than fee", async function () {
       expect(
-        sales.mint([[signers[0].address, 2]], {
+        sales.mint(signers[0].address, 2, {
           value: ethers.utils.parseEther("0.001"),
         })
       ).to.be.revertedWith("underpriced");
@@ -92,3 +105,12 @@ describe("DiversifyNFTSales", function () {
     expect(await sales.hasRole(role, signers[3].address)).to.equals(true);
   });
 });
+
+// const DiversifyNFT = artifacts.require('DiversifyNFT');
+// const DiversifyNFTSale = artifacts.require('DiversifyNFTSales');
+//
+// contract('', function ([owner, addr1, addr2, addr3, addr4, addr5, ...addrs]){
+//   beforeEach(async function(){
+//     this.nft = await DiversifyNFT.new()
+//   })
+// })

@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 
 /// ENTER FOllOWING DETAILS
 const NETWORK = "rinkeby";
-const TEAM_ADDRESS = "0x6f99e915Ee5B592a1Fd2203e15B0ECc157B535c8";
+const TEAM_ADDRESS = "0xee06986E54157FDF85cBa935d41fd47c27ab6F82";
 const FEE = "10000000000000000"; // fee in ETH (1e18 format)
 /// ETHER ABOVE DETAILS
 
